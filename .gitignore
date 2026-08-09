@@ -1,0 +1,40 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, built with `go test -c`
+*.test
+
+# Code coverage profiles and other test artifacts
+*.out
+coverage.*
+*.coverprofile
+profile.cov
+
+# Dependency directories (remove the comment below to include it)
+# vendor/
+
+# Go workspace file
+go.work
+go.work.sum
+
+# env file
+.env
+
+# real k8s secret manifests (use k8s/secret.example.yaml as a template)
+/k8s/secret.yaml
+
+# Editor/IDE
+# .idea/
+.vscode/
+
+/bin/
+/dist/
+*.test
+.env
+.env.local
+coverage.*
+__debug_bin*

@@ -1,6 +1,8 @@
 package config
 
 import (
+	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -8,63 +10,104 @@ import (
 
 func TestLoad(t *testing.T) {
 	tests := []struct {
-		name           string
-		env            map[string]string
-		expectedError  error
-		expectedConfig Config
+		name                   string
+		env                    map[string]string
+		modelConfigPathEnv     string
+		modelConfigFiletoWrite string
+		modelConfigFileContent string
+		expectedError          error
+		expectedConfig         Config
 	}{
 		{
-			name: "valid config",
+			name: "successful call - valid config",
 			env: map[string]string{
-				"PORT":                 "3000",
-				"OLLAMA_BASE_URL":      "http://testollama.com",
-				"OLLAMA_DEFAULT_MODEL": "test-model",
-				"LOG_LEVEL":            "error",
+				"PORT":            "3000",
+				"OLLAMA_BASE_URL": "http://testollama.com",
+				"LOG_LEVEL":       "error",
 			},
-			expectedError: nil,
+			modelConfigPathEnv:     "models.yaml",
+			modelConfigFiletoWrite: "models.yaml",
+			modelConfigFileContent: validFileContent,
+			expectedError:          nil,
 			expectedConfig: Config{
-				Port:               "3000",
-				OllamaBaseURL:      "http://testollama.com",
-				OllamaDefaultModel: "test-model",
-				LogLevel:           "error",
+				Port:          "3000",
+				OllamaBaseURL: "http://testollama.com",
+				LogLevel:      "error",
+				ModelProviderMap: map[string]ModelProviderConfig{
+					"test_model": {
+						ProviderName:    "test_provider",
+						ProviderBaseURL: "http://test_provider.com:3000",
+						UpstreamModel:   "test_upstream_model",
+					},
+				},
 			},
 		},
 		{
-			name: "invalid port",
+			name: "fails with invalid port",
 			env: map[string]string{
 				"PORT": "invalid",
 			},
-			expectedError:  ErrLoadingPort,
-			expectedConfig: Config{},
+			modelConfigPathEnv:     "models.yaml",
+			modelConfigFiletoWrite: "models.yaml",
+			modelConfigFileContent: validFileContent,
+			expectedError:          ErrLoadingPort,
+			expectedConfig:         Config{},
 		},
 		{
-			name: "invalid ollama base url",
+			name: "fails with invalid ollama base url",
 			env: map[string]string{
 				"OLLAMA_BASE_URL": "://invalid-url",
 			},
-			expectedError:  ErrInvalidOllamaBaseURL,
-			expectedConfig: Config{},
+			modelConfigPathEnv:     "models.yaml",
+			modelConfigFiletoWrite: "models.yaml",
+			modelConfigFileContent: validFileContent,
+			expectedError:          ErrInvalidOllamaBaseURL,
+			expectedConfig:         Config{},
 		},
 		{
-			name:          "missing env vars",
-			env:           map[string]string{},
-			expectedError: nil,
-			expectedConfig: Config{
-				Port:               "8080",
-				OllamaBaseURL:      "http://localhost:11434",
-				OllamaDefaultModel: "qwen2.5-coder",
-				LogLevel:           "info",
+			name: "fails if LoadModelProviderConfig fails",
+			env: map[string]string{
+				"PORT":            "3000",
+				"OLLAMA_BASE_URL": "http://testollama.com",
+				"LOG_LEVEL":       "error",
 			},
+			modelConfigPathEnv:     "dummy.yaml",
+			modelConfigFiletoWrite: "models.yaml",
+			modelConfigFileContent: validFileContent,
+			expectedError:          ErrInvalidModelProviderConfig,
+			expectedConfig:         Config{},
+		},
+		{
+			name:           "fails with missing env vars",
+			env:            map[string]string{},
+			expectedError:  ErrInvalidModelProviderConfig,
+			expectedConfig: Config{},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Arrange
 			for k, v := range tt.env {
 				t.Setenv(k, v)
 			}
+			dir := t.TempDir()
+			if tt.modelConfigPathEnv != "" {
+				envVarPath := filepath.Join(dir, tt.modelConfigPathEnv)
+				t.Setenv("MODEL_CONFIG_PATH", envVarPath)
+			}
 
+			if tt.modelConfigFiletoWrite != "" {
+				path := filepath.Join(dir, tt.modelConfigFiletoWrite)
+				if err := os.WriteFile(path, []byte(tt.modelConfigFileContent), os.ModePerm); err != nil {
+					t.Fatal(err)
+				}
+			}
+
+			// Act
 			cfg, err := Load()
+
+			// Assert
 			assert.Equal(t, tt.expectedConfig, cfg)
 			assert.ErrorIsf(t, err, tt.expectedError, "")
 		})

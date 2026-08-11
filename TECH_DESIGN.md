@@ -53,11 +53,17 @@ type Provider interface {
 - `OllamaProvider` first. `OpenAIProvider`, `BedrockProvider` later — same interface.
 - Model map (config):
 ```yaml
-models:
-  gpt-4o-mini:   { provider: ollama, model: qwen2.5:7b,   fallback: llama3.1:8b }
-  text-embed:    { provider: ollama, model: nomic-embed-text }
 providers:
-  ollama: { base_url: http://localhost:11434 }
+  - name: ollama
+    base_url: http://localhost:11434
+models:
+  - name: gpt-4o-mini
+    provider: ollama
+    upstream_model: qwen2.5:7b
+    fallback: llama3.1:8b
+  - name: text-embed
+    provider: ollama
+    upstream_model: nomic-embed-text
 ```
 
 ### 4.2 Streaming

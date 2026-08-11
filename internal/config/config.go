@@ -10,17 +10,18 @@ import (
 )
 
 var (
-	ErrLoadingPort          = errors.New("error loading port")
-	ErrInvalidPort          = errors.New("error invalid port")
-	ErrInvalidOllamaBaseURL = errors.New("error invalid ollama base url")
+	ErrLoadingPort                = errors.New("error loading port")
+	ErrInvalidPort                = errors.New("error invalid port")
+	ErrInvalidOllamaBaseURL       = errors.New("error invalid ollama base url")
+	ErrInvalidModelProviderConfig = errors.New("error invalid model provider config")
 )
 
 // Config holds the configuration for the project.
 type Config struct {
-	Port               string
-	OllamaBaseURL      string
-	OllamaDefaultModel string
-	LogLevel           string
+	Port             string
+	OllamaBaseURL    string
+	ModelProviderMap map[string]ModelProviderConfig
+	LogLevel         string
 }
 
 // Load loads the configuration from environment variables.
@@ -48,9 +49,9 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("%w: %q: either scheme or host is empty", ErrInvalidOllamaBaseURL, ollamaBaseURL)
 	}
 
-	ollamaDefaultModel := os.Getenv("OLLAMA_DEFAULT_MODEL")
-	if ollamaDefaultModel == "" {
-		ollamaDefaultModel = "qwen2.5-coder"
+	modelConfig, err := LoadModelProviderConfig()
+	if err != nil {
+		return Config{}, fmt.Errorf("%w: %w", ErrInvalidModelProviderConfig, err)
 	}
 
 	logLevel := os.Getenv("LOG_LEVEL")
@@ -59,9 +60,9 @@ func Load() (Config, error) {
 	}
 
 	return Config{
-		Port:               port,
-		OllamaBaseURL:      ollamaBaseURL,
-		OllamaDefaultModel: ollamaDefaultModel,
-		LogLevel:           logLevel,
+		Port:             port,
+		OllamaBaseURL:    ollamaBaseURL,
+		ModelProviderMap: modelConfig,
+		LogLevel:         logLevel,
 	}, nil
 }

@@ -1,0 +1,10 @@
+providers:
+  - name: ollama
+    base_url: http://localhost:11434
+models:
+  - name: gpt-4o-mini
+    provider: ollama
+    upstream_model: qwen2.5-7b
+  - name: text-embed
+    provider: ollama
+    upstream_model: nomic-embed-text

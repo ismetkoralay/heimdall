@@ -14,6 +14,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ismetkoralay/heimdall/internal/provider"
+	"github.com/ismetkoralay/heimdall/internal/provider/fake"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -89,6 +90,15 @@ func TestChatHandler(t *testing.T) {
 				},
 			},
 		}
+		chatRequestFakeModelWithoutTempMax = ChatRequestModel{
+			Model: "fake-model",
+			Messages: []ChatMessage{
+				{
+					Role:    "user",
+					Content: "content",
+				},
+			},
+		}
 		chatRequestWithoutModel = ChatRequestModel{
 			Messages: []ChatMessage{
 				{
@@ -121,12 +131,37 @@ func TestChatHandler(t *testing.T) {
 				TotalTokens:      35,
 			},
 		}
+		fakeProviderChatResponse = fake.CreateFakeResponse()
+		fakeChatResponse         = ChatResponse{
+			ID:      uuidStr,
+			Object:  "chat.completion",
+			Created: now.Unix(),
+			Model:   fakeProviderChatResponse.Model,
+			Choices: []ChatChoice{
+				{
+					Index: 0,
+					Message: ChatMessage{
+						Role:    "assistant",
+						Content: fakeProviderChatResponse.Content,
+					},
+					FinishReason: fakeProviderChatResponse.FinishReason,
+				},
+			},
+			Usage: Usage{
+				PromptTokens:     fakeProviderChatResponse.Usage.PromptTokens,
+				CompletionTokens: fakeProviderChatResponse.Usage.CompletionTokens,
+				TotalTokens:      fakeProviderChatResponse.Usage.TotalTokens,
+			},
+		}
 	)
 
 	fullChatRequestJson, err := json.Marshal(fullChatRequest)
 	assert.NoError(t, err)
 
 	chatRequestWithoutTempMaxJson, err := json.Marshal(chatRequestWithoutTempMax)
+	assert.NoError(t, err)
+
+	chatRequestFakeModelWithoutTempMaxJson, err := json.Marshal(chatRequestFakeModelWithoutTempMax)
 	assert.NoError(t, err)
 
 	chatResponseJson, err := json.Marshal(chatResponse)
@@ -137,6 +172,10 @@ func TestChatHandler(t *testing.T) {
 	assert.NoError(t, err)
 
 	chatRequestWithoutMessagesJson, err := json.Marshal(chatRequestWithoutMessages)
+	assert.NoError(t, err)
+
+	chatResponseFakeModel, err := json.Marshal(fakeChatResponse)
+	chatResponseFakeModel = append(chatResponseFakeModel, []byte("\n")...)
 	assert.NoError(t, err)
 
 	tests := []struct {
@@ -176,6 +215,18 @@ func TestChatHandler(t *testing.T) {
 			expectedStatusCode:   http.StatusOK,
 		},
 		{
+			name: "successful call - fake model, fake provider",
+			providerRouter: &MockProviderRouter{
+				resolve: func(model string) (provider.Provider, string, error) {
+					return fake.NewFakeProvider(false), "fake-model", nil
+				},
+			},
+			method:               http.MethodPost,
+			requestBody:          chatRequestFakeModelWithoutTempMaxJson,
+			expectedResponseBody: chatResponseFakeModel,
+			expectedStatusCode:   http.StatusOK,
+		},
+		{
 			name: "successful call - with temperature and max tokens",
 			providerRouter: &MockProviderRouter{
 				resolve: func(model string) (provider.Provider, string, error) {
@@ -202,6 +253,18 @@ func TestChatHandler(t *testing.T) {
 			requestBody:          chatRequestWithoutTempMaxJson,
 			expectedResponseBody: chatResponseJson,
 			expectedStatusCode:   http.StatusOK,
+		},
+		{
+			name: "fails when fake provider fails",
+			providerRouter: &MockProviderRouter{
+				resolve: func(model string) (provider.Provider, string, error) {
+					return fake.NewFakeProvider(true), "fake-model", nil
+				},
+			},
+			method:               http.MethodPost,
+			requestBody:          chatRequestFakeModelWithoutTempMaxJson,
+			expectedResponseBody: createChatErrorResponse(t, "error from fake provider"),
+			expectedStatusCode:   http.StatusBadRequest,
 		},
 		{
 			name: "fails when request is not valid",

@@ -21,6 +21,7 @@ type Config struct {
 	Port             string
 	OllamaBaseURL    string
 	ModelProviderMap map[string]ModelProviderConfig
+	ProviderMap      map[string]string
 	LogLevel         string
 }
 
@@ -49,7 +50,7 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("%w: %q: either scheme or host is empty", ErrInvalidOllamaBaseURL, ollamaBaseURL)
 	}
 
-	modelConfig, err := LoadModelProviderConfig()
+	modelConfig, providerMap, err := LoadModelProviderConfig()
 	if err != nil {
 		return Config{}, fmt.Errorf("%w: %w", ErrInvalidModelProviderConfig, err)
 	}
@@ -63,6 +64,7 @@ func Load() (Config, error) {
 		Port:             port,
 		OllamaBaseURL:    ollamaBaseURL,
 		ModelProviderMap: modelConfig,
+		ProviderMap:      providerMap,
 		LogLevel:         logLevel,
 	}, nil
 }

@@ -75,6 +75,9 @@ type Provider interface {
 	ChatStream(ctx context.Context, req ChatRequest) iter.Seq2[Chunk, error]
 	// Embed processes an embedding request and returns an embedding response or an error.
 	Embed(ctx context.Context, req EmbedRequest) (EmbedResponse, error)
+	// SetBaseURL sets the base URL of the provider.
+	// Must be called properly before the usage of the provider.
+	SetBaseURL(baseURL string)
 	// Name returns the name of the provider.
 	Name() string
 }

@@ -27,16 +27,17 @@ func NewRouter(
 	}
 }
 
-func (r *Router) Resolve(model string) (Provider, error) {
+// Resolve returns resolved provider and upstream model
+func (r *Router) Resolve(model string) (Provider, string, error) {
 	m, ok := r.models[model]
 	if !ok {
-		return nil, ErrUnknownModel
+		return nil, "", ErrUnknownModel
 	}
 
 	p, ok := r.providers[m.ProviderName]
 	if !ok {
-		return nil, fmt.Errorf("%w: expected provider: %s for model: %s", ErrUnknownProvider, m.ProviderName, model)
+		return nil, "", fmt.Errorf("%w: expected provider: %s for model: %s", ErrUnknownProvider, m.ProviderName, model)
 	}
 
-	return p, nil
+	return p, m.UpstreamModel, nil
 }

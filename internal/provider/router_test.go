@@ -23,18 +23,21 @@ func (*DummyProvider) Embed(ctx context.Context, req EmbedRequest) (EmbedRespons
 	return EmbedResponse{}, nil
 }
 
+func (*DummyProvider) SetBaseURL(baseURL string) {}
+
 func (*DummyProvider) Name() string {
 	return ""
 }
 
 func TestRoute(t *testing.T) {
 	tests := []struct {
-		name             string
-		givenModelMap    map[string]config.ModelProviderConfig
-		givenProviders   map[string]Provider
-		requestedModel   string
-		expectedProvider Provider
-		expectedErr      error
+		name                  string
+		givenModelMap         map[string]config.ModelProviderConfig
+		givenProviders        map[string]Provider
+		requestedModel        string
+		expectedProvider      Provider
+		expectedUpstreamModel string
+		expectedErr           error
 	}{
 		{
 			name: "successful call",
@@ -48,9 +51,10 @@ func TestRoute(t *testing.T) {
 			givenProviders: map[string]Provider{
 				"test-provider": &DummyProvider{},
 			},
-			requestedModel:   "test-model",
-			expectedProvider: &DummyProvider{},
-			expectedErr:      nil,
+			requestedModel:        "test-model",
+			expectedProvider:      &DummyProvider{},
+			expectedUpstreamModel: "test-model",
+			expectedErr:           nil,
 		},
 		{
 			name: "fails if the requested model is unknown",
@@ -92,7 +96,7 @@ func TestRoute(t *testing.T) {
 			router := NewRouter(tt.givenModelMap, tt.givenProviders)
 
 			// Act
-			res, err := router.Resolve(tt.requestedModel)
+			res, uM, err := router.Resolve(tt.requestedModel)
 
 			// Assert
 			if tt.expectedErr != nil {
@@ -102,6 +106,7 @@ func TestRoute(t *testing.T) {
 			}
 
 			assert.Equal(t, tt.expectedProvider, res)
+			assert.Equal(t, tt.expectedUpstreamModel, uM)
 		})
 	}
 }

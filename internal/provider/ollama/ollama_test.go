@@ -11,7 +11,6 @@ import (
 
 	"github.com/ismetkoralay/heimdall/internal/provider"
 	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 )
 
 // errRoundTripper simulates a transport-level failure (e.g. connection refused)
@@ -582,7 +581,8 @@ func TestChat(t *testing.T) {
 			if tt.baseURL != "" {
 				baseURL = tt.baseURL
 			}
-			p := NewOllamaProvider(client, baseURL)
+			p := NewOllamaProvider(client)
+			p.SetBaseURL(baseURL)
 
 			// Act
 			res, err := p.Chat(tt.ctx, tt.chatRequest)
@@ -613,13 +613,17 @@ func TestChat(t *testing.T) {
 }
 
 func TestOllamaProvider_Chat_InvalidJSONResponse(t *testing.T) {
+	// Arrange
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte("not json"))
 	}))
 	defer srv.Close()
 
-	p := NewOllamaProvider(srv.Client(), srv.URL)
+	p := NewOllamaProvider(srv.Client())
+	p.SetBaseURL(srv.URL)
+
+	// Act
 	_, err := p.Chat(context.Background(), provider.ChatRequest{
 		Model: "test-model",
 		Messages: []provider.Message{
@@ -629,18 +633,24 @@ func TestOllamaProvider_Chat_InvalidJSONResponse(t *testing.T) {
 			},
 		},
 	})
-	require.Error(t, err)
+
+	// Assert
+	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "error decoding response")
 }
 
 func TestOllamaProvider_Chat_InvalidJSONErrorResponse(t *testing.T) {
+	// Arrange
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusBadGateway)
 		_, _ = w.Write([]byte("<html>bad gateway</html>"))
 	}))
 	defer srv.Close()
 
-	p := NewOllamaProvider(srv.Client(), srv.URL)
+	p := NewOllamaProvider(srv.Client())
+	p.SetBaseURL(srv.URL)
+
+	// Act
 	_, err := p.Chat(context.Background(), provider.ChatRequest{
 		Model: "test-model",
 		Messages: []provider.Message{
@@ -650,17 +660,20 @@ func TestOllamaProvider_Chat_InvalidJSONErrorResponse(t *testing.T) {
 			},
 		},
 	})
-	require.Error(t, err)
-	require.ErrorIs(t, err, ErrProviderFailed)
+
+	// Assert
+	assert.Error(t, err)
+	assert.ErrorIs(t, err, ErrProviderFailed)
 
 	var providerErr *provider.ProviderError
-	require.ErrorAs(t, err, &providerErr)
+	assert.ErrorAs(t, err, &providerErr)
 	assert.Equal(t, "ollama", providerErr.Provider)
 	assert.Equal(t, http.StatusBadGateway, providerErr.StatusCode)
 	assert.True(t, providerErr.Retryable)
 }
 
 func TestOllamaProvider_Chat_ContextCanceled(t *testing.T) {
+	// Arrange
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_ = json.NewEncoder(w).Encode(ollamaChatResponse{})
@@ -670,7 +683,10 @@ func TestOllamaProvider_Chat_ContextCanceled(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
 
-	p := NewOllamaProvider(srv.Client(), srv.URL)
+	p := NewOllamaProvider(srv.Client())
+	p.SetBaseURL(srv.URL)
+
+	// Act
 	_, err := p.Chat(ctx, provider.ChatRequest{
 		Model: "test-model",
 		Messages: []provider.Message{
@@ -680,6 +696,36 @@ func TestOllamaProvider_Chat_ContextCanceled(t *testing.T) {
 			},
 		},
 	})
-	require.Error(t, err)
+
+	// Assert
+	assert.Error(t, err)
 	assert.ErrorIs(t, err, context.Canceled)
+}
+
+func TestSetBaseURL(t *testing.T) {
+	// Arrange
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(ollamaChatResponse{})
+	}))
+	defer srv.Close()
+
+	p := NewOllamaProvider(srv.Client())
+
+	// Act
+	p.SetBaseURL(srv.URL)
+
+	// Assert
+	assert.Equal(t, srv.URL, p.baseURL)
+}
+
+func TestName(t *testing.T) {
+	// Arrange
+	p := NewOllamaProvider(nil)
+
+	// Act
+	name := p.Name()
+
+	// Assert
+	assert.Equal(t, "ollama", name)
 }

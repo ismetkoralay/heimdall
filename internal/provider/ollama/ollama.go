@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"iter"
 	"net/http"
 	"net/url"
 
@@ -22,11 +23,9 @@ type OllamaProvider struct {
 
 func NewOllamaProvider(
 	client *http.Client,
-	baseURL string,
 ) *OllamaProvider {
 	return &OllamaProvider{
 		httpClient: client,
-		baseURL:    baseURL,
 	}
 }
 
@@ -175,4 +174,20 @@ func (p *OllamaProvider) Chat(ctx context.Context, request provider.ChatRequest)
 			TotalTokens:      ollamaResponse.PromptEvalCount + ollamaResponse.EvalCount,
 		},
 	}, nil
+}
+
+func (p *OllamaProvider) ChatStream(ctx context.Context, request provider.ChatRequest) iter.Seq2[provider.Chunk, error] {
+	return nil
+}
+
+func (p *OllamaProvider) Embed(ctx context.Context, request provider.EmbedRequest) (provider.EmbedResponse, error) {
+	return provider.EmbedResponse{}, nil
+}
+
+func (p *OllamaProvider) SetBaseURL(baseURL string) {
+	p.baseURL = baseURL
+}
+
+func (p *OllamaProvider) Name() string {
+	return "ollama"
 }

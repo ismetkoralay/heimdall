@@ -40,6 +40,32 @@ func TestLoad(t *testing.T) {
 						UpstreamModel:   "test_upstream_model",
 					},
 				},
+				ProviderMap: map[string]string{
+					"test_provider": "http://test_provider.com:3000",
+				},
+			},
+		},
+		{
+			name:                   "successful call - only with model config path env var",
+			env:                    map[string]string{},
+			modelConfigPathEnv:     "models.yaml",
+			modelConfigFiletoWrite: "models.yaml",
+			modelConfigFileContent: validFileContent,
+			expectedError:          nil,
+			expectedConfig: Config{
+				Port:          "8080",
+				OllamaBaseURL: "http://localhost:11434",
+				LogLevel:      "info",
+				ModelProviderMap: map[string]ModelProviderConfig{
+					"test_model": {
+						ProviderName:    "test_provider",
+						ProviderBaseURL: "http://test_provider.com:3000",
+						UpstreamModel:   "test_upstream_model",
+					},
+				},
+				ProviderMap: map[string]string{
+					"test_provider": "http://test_provider.com:3000",
+				},
 			},
 		},
 		{

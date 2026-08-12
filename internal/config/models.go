@@ -43,56 +43,55 @@ type ModelProviderConfig struct {
 	FallbackModel   string
 }
 
-func LoadModelProviderConfig() (map[string]ModelProviderConfig, error) {
+// LoadModelProviderConfig loads the model provider config from the environment variable MODEL_CONFIG_PATH.
+// It returns a map of model provider configs and a map of provider names to base URLs.
+func LoadModelProviderConfig() (map[string]ModelProviderConfig, map[string]string, error) {
 	path := os.Getenv("MODEL_CONFIG_PATH")
 	if path == "" {
-		return nil, ErrMissingModelConfigMapEnvVar
+		return nil, nil, ErrMissingModelConfigMapEnvVar
 	}
 
 	data, err := os.ReadFile(path)
 	if err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrReadingModelConfigFile, err)
+		return nil, nil, fmt.Errorf("%w: %w", ErrReadingModelConfigFile, err)
 	}
 
 	var config ModelConfig
 	if err = yaml.Unmarshal(data, &config); err != nil {
-		return nil, fmt.Errorf("%w: %w", ErrUnmarshalingModelConfigFile, err)
+		return nil, nil, fmt.Errorf("%w: %w", ErrUnmarshalingModelConfigFile, err)
 	}
 
-	providerMap := make(map[string]ProviderSection, len(config.Providers))
+	providerMap := make(map[string]string, len(config.Providers))
 	for _, p := range config.Providers {
 		if _, ok := providerMap[p.Name]; ok {
-			return nil, fmt.Errorf("%w, provider name: %s", ErrProviderDefinedManyTimes, p.Name)
+			return nil, nil, fmt.Errorf("%w, provider name: %s", ErrProviderDefinedManyTimes, p.Name)
 		}
 		if u, err := url.Parse(p.BaseURL); err != nil {
-			return nil, fmt.Errorf("%w: %w", ErrInvalidProviderURL, err)
+			return nil, nil, fmt.Errorf("%w: %w", ErrInvalidProviderURL, err)
 		} else if u.Scheme == "" || u.Host == "" {
-			return nil, fmt.Errorf("%w: %q: either scheme or host is empty", ErrInvalidProviderURL, p.BaseURL)
+			return nil, nil, fmt.Errorf("%w: %q: either scheme or host is empty", ErrInvalidProviderURL, p.BaseURL)
 		}
 
-		providerMap[p.Name] = ProviderSection{
-			Name:    p.Name,
-			BaseURL: p.BaseURL,
-		}
+		providerMap[p.Name] = p.BaseURL
 	}
 
 	modelMap := make(map[string]ModelProviderConfig, len(config.Models))
 	for _, m := range config.Models {
 		if _, ok := modelMap[m.Name]; ok {
-			return nil, fmt.Errorf("%w, model name: %s", ErrModelDefinedManyTimes, m.Name)
+			return nil, nil, fmt.Errorf("%w, model name: %s", ErrModelDefinedManyTimes, m.Name)
 		}
-		ps, ok := providerMap[m.ProviderName]
+		providerBaseURL, ok := providerMap[m.ProviderName]
 		if !ok {
-			return nil, fmt.Errorf("%w: %s", ErrUnknownProvider, m.ProviderName)
+			return nil, nil, fmt.Errorf("%w: %s", ErrUnknownProvider, m.ProviderName)
 		}
 
 		modelMap[m.Name] = ModelProviderConfig{
-			ProviderName:    ps.Name,
-			ProviderBaseURL: ps.BaseURL,
+			ProviderName:    m.ProviderName,
+			ProviderBaseURL: providerBaseURL,
 			UpstreamModel:   m.UpstreamModel,
 			FallbackModel:   m.Fallback,
 		}
 
 	}
-	return modelMap, nil
+	return modelMap, providerMap, nil
 }

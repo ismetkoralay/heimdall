@@ -9,9 +9,35 @@ services:
       - PORT=8080
       - LOG_LEVEL=info
       - MODEL_CONFIG_PATH=/models.yaml
+      - DB_HOST=postgres
+      - DB_USER=heimdall
+      - DB_PORT=5432
+      - DB_PASSWORD=password
+      - DB_NAME=heimdall
+      - DB_SSL_MODE=disable
+      - DB_APPLY_MIGRATIONS=true
+      - DB_MIGRATIONS_DIR=/migrations
     depends_on:
       ollama-init:
         condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
+  
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      - POSTGRES_USER=heimdall
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=heimdall
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U heimdall"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
   ollama:
     image: ollama/ollama:0.32.9
@@ -58,5 +84,6 @@ services:
     restart: unless-stopped
 
 volumes:
+  postgres-data:
   ollama: {}
   ollama-webui: {}

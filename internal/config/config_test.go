@@ -21,18 +21,16 @@ func TestLoad(t *testing.T) {
 		{
 			name: "successful call - valid config",
 			env: map[string]string{
-				"PORT":            "3000",
-				"OLLAMA_BASE_URL": "http://testollama.com",
-				"LOG_LEVEL":       "error",
+				"PORT":      "3000",
+				"LOG_LEVEL": "error",
 			},
 			modelConfigPathEnv:     "models.yaml",
 			modelConfigFiletoWrite: "models.yaml",
 			modelConfigFileContent: validFileContent,
 			expectedError:          nil,
 			expectedConfig: Config{
-				Port:          "3000",
-				OllamaBaseURL: "http://testollama.com",
-				LogLevel:      "error",
+				Port:     "3000",
+				LogLevel: "error",
 				ModelProviderMap: map[string]ModelProviderConfig{
 					"test_model": {
 						ProviderName:    "test_provider",
@@ -53,9 +51,8 @@ func TestLoad(t *testing.T) {
 			modelConfigFileContent: validFileContent,
 			expectedError:          nil,
 			expectedConfig: Config{
-				Port:          "8080",
-				OllamaBaseURL: "http://localhost:11434",
-				LogLevel:      "info",
+				Port:     "8080",
+				LogLevel: "info",
 				ModelProviderMap: map[string]ModelProviderConfig{
 					"test_model": {
 						ProviderName:    "test_provider",
@@ -77,17 +74,6 @@ func TestLoad(t *testing.T) {
 			modelConfigFiletoWrite: "models.yaml",
 			modelConfigFileContent: validFileContent,
 			expectedError:          ErrLoadingPort,
-			expectedConfig:         Config{},
-		},
-		{
-			name: "fails with invalid ollama base url",
-			env: map[string]string{
-				"OLLAMA_BASE_URL": "://invalid-url",
-			},
-			modelConfigPathEnv:     "models.yaml",
-			modelConfigFiletoWrite: "models.yaml",
-			modelConfigFileContent: validFileContent,
-			expectedError:          ErrInvalidOllamaBaseURL,
 			expectedConfig:         Config{},
 		},
 		{

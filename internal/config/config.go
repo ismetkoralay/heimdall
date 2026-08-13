@@ -4,7 +4,6 @@ package config
 import (
 	"errors"
 	"fmt"
-	"net/url"
 	"os"
 	"strconv"
 )
@@ -12,14 +11,12 @@ import (
 var (
 	ErrLoadingPort                = errors.New("error loading port")
 	ErrInvalidPort                = errors.New("error invalid port")
-	ErrInvalidOllamaBaseURL       = errors.New("error invalid ollama base url")
 	ErrInvalidModelProviderConfig = errors.New("error invalid model provider config")
 )
 
 // Config holds the configuration for the project.
 type Config struct {
 	Port             string
-	OllamaBaseURL    string
 	ModelProviderMap map[string]ModelProviderConfig
 	ProviderMap      map[string]string
 	LogLevel         string
@@ -39,17 +36,6 @@ func Load() (Config, error) {
 		return Config{}, fmt.Errorf("%w: %q: port must be between 1 and 65535", ErrInvalidPort, port)
 	}
 
-	ollamaBaseURL := os.Getenv("OLLAMA_BASE_URL")
-	if ollamaBaseURL == "" {
-		ollamaBaseURL = "http://localhost:11434"
-	}
-
-	if u, err := url.Parse(ollamaBaseURL); err != nil {
-		return Config{}, fmt.Errorf("%w: %w", ErrInvalidOllamaBaseURL, err)
-	} else if u.Scheme == "" || u.Host == "" {
-		return Config{}, fmt.Errorf("%w: %q: either scheme or host is empty", ErrInvalidOllamaBaseURL, ollamaBaseURL)
-	}
-
 	modelConfig, providerMap, err := LoadModelProviderConfig()
 	if err != nil {
 		return Config{}, fmt.Errorf("%w: %w", ErrInvalidModelProviderConfig, err)
@@ -62,7 +48,6 @@ func Load() (Config, error) {
 
 	return Config{
 		Port:             port,
-		OllamaBaseURL:    ollamaBaseURL,
 		ModelProviderMap: modelConfig,
 		ProviderMap:      providerMap,
 		LogLevel:         logLevel,

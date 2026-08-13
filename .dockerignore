@@ -1,0 +1,9 @@
+.git
+.github
+.claude
+k8s
+*.md
+bin
+dist
+coverage.*
+.env

@@ -100,10 +100,12 @@ async_jobs(id, key_id, status, request_json, result_json, error, created_at, upd
 ```
 
 ## 6. Local Development
-1. `ollama serve` + pull `qwen2.5:7b`, `nomic-embed-text`.
-2. `docker compose up` → Heimdall + Postgres + Redis.
-3. Create a key via admin API; point an OpenAI client at `http://localhost:8080/v1` with that key and chat.
-4. Hit it twice to see a cache hit; spam it to trip the 429; submit an async job and poll.
+1. `docker compose up` (`make up`) → Heimdall + Ollama + Postgres/Redis (later milestones). Ollama runs
+   as its own compose service; an init job pulls the configured models on startup. Heimdall reaches it
+   at `http://ollama:11434` over the compose network — no host-installed Ollama or `host.docker.internal`
+   needed.
+2. Create a key via admin API; point an OpenAI client at `http://localhost:8080/v1` with that key and chat.
+3. Hit it twice to see a cache hit; spam it to trip the 429; submit an async job and poll.
 
 ## 7. Deployment (kind)
 - Multi-stage Dockerfile → distroless.

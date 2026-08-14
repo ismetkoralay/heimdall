@@ -18,11 +18,10 @@ import (
 	"github.com/ismetkoralay/heimdall/internal/health"
 	"github.com/ismetkoralay/heimdall/internal/provider"
 	"github.com/ismetkoralay/heimdall/internal/provider/ollama"
+	"github.com/ismetkoralay/heimdall/internal/sql"
 )
 
-var (
-	ErrProviderBaseURLNotSet = errors.New("error provider base url is not set")
-)
+var ErrProviderBaseURLNotSet = errors.New("error provider base url is not set")
 
 func main() {
 	logger := slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
@@ -44,6 +43,18 @@ func main() {
 
 	router := provider.NewRouter(cfg.ModelProviderMap, providers)
 
+	db, err := sql.New(context.Background(), cfg.Database)
+	if err != nil {
+		logger.Error(err.Error())
+		os.Exit(1)
+	}
+
+	defer func() {
+		if err := db.Close(); err != nil {
+			logger.Error("failed to close db connection", "error", err)
+		}
+	}()
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", health.Handler)
 	mux.Handle("POST /v1/chat/completions", api.ChatHandler(router, time.Now, uuid.New))
@@ -56,7 +67,7 @@ func main() {
 
 	go func() {
 		logger.Info("Starting server", "port", cfg.Port)
-		if err := server.ListenAndServe(); err != nil && errors.Is(err, http.ErrServerClosed) {
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error("Server failed", "error", err)
 			os.Exit(1)
 		}

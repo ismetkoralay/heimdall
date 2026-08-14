@@ -6,12 +6,19 @@ import (
 	"fmt"
 	"os"
 	"strconv"
+	"strings"
 )
 
 var (
 	ErrLoadingPort                = errors.New("error loading port")
 	ErrInvalidPort                = errors.New("error invalid port")
 	ErrInvalidModelProviderConfig = errors.New("error invalid model provider config")
+	ErrMissingDbHost              = errors.New("error missing db host")
+	ErrMissingDbPort              = errors.New("error missing db port")
+	ErrMissingDbUser              = errors.New("error missing db user")
+	ErrMissingDbPassword          = errors.New("error missing db password")
+	ErrMissingDbName              = errors.New("error missing db name")
+	ErrMissingDbSSLMode           = errors.New("error missing db ssl mode")
 )
 
 // Config holds the configuration for the project.
@@ -20,6 +27,18 @@ type Config struct {
 	ModelProviderMap map[string]ModelProviderConfig
 	ProviderMap      map[string]string
 	LogLevel         string
+	Database         Database
+}
+
+type Database struct {
+	Host            string
+	Port            string
+	User            string
+	Password        string
+	Name            string
+	SSLMode         string
+	ApplyMigrations bool
+	MigrationsDir   string
 }
 
 // Load loads the configuration from environment variables.
@@ -46,10 +65,61 @@ func Load() (Config, error) {
 		logLevel = "info"
 	}
 
+	dbHost := os.Getenv("DB_HOST")
+	if dbHost == "" {
+		return Config{}, ErrMissingDbHost
+	}
+
+	dbPort := os.Getenv("DB_PORT")
+	if dbPort == "" {
+		return Config{}, ErrMissingDbPort
+	}
+
+	dbUser := os.Getenv("DB_USER")
+	if dbUser == "" {
+		return Config{}, ErrMissingDbUser
+	}
+
+	dbPassword := os.Getenv("DB_PASSWORD")
+	if dbPassword == "" {
+		return Config{}, ErrMissingDbPassword
+	}
+
+	dbName := os.Getenv("DB_NAME")
+	if dbName == "" {
+		return Config{}, ErrMissingDbName
+	}
+
+	dbSSLMode := os.Getenv("DB_SSL_MODE")
+	if strings.TrimSpace(dbSSLMode) == "" {
+		dbSSLMode = "disable"
+	}
+
+	dbApplyMigrationsEnv := os.Getenv("DB_APPLY_MIGRATIONS")
+	dbApplyMigrations, _ := strconv.ParseBool(dbApplyMigrationsEnv)
+	if strings.TrimSpace(dbSSLMode) == "" {
+		dbApplyMigrations = false
+	}
+
+	dbMigrationsDir := os.Getenv("DB_MIGRATIONS_DIR")
+	if strings.TrimSpace(dbMigrationsDir) == "" {
+		dbMigrationsDir = "migrations"
+	}
+
 	return Config{
 		Port:             port,
 		ModelProviderMap: modelConfig,
 		ProviderMap:      providerMap,
 		LogLevel:         logLevel,
+		Database: Database{
+			Host:            dbHost,
+			Port:            dbPort,
+			User:            dbUser,
+			Password:        dbPassword,
+			Name:            dbName,
+			SSLMode:         dbSSLMode,
+			ApplyMigrations: dbApplyMigrations,
+			MigrationsDir:   dbMigrationsDir,
+		},
 	}, nil
 }

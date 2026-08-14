@@ -40,6 +40,15 @@ the repo-specific deltas live here:
   `config_test.go` case, and a line in `.env.example`.
 - **Structured logs only.** Never log a prompt body, a response body, or an API key —
   not even hashed, not even at debug, unless an explicit debug flag gates it.
+- **Integration tests:** `internal/sql`'s `TestNewIntegration` is the one exception to
+  `~/.claude/CLAUDE.md`'s "skip via env var" rule. It uses `testcontainers-go` to start and
+  tear down its own disposable Postgres container per run, calling
+  `testcontainers.SkipIfProviderIsNotHealthy` to skip cleanly whenever Docker isn't reachable
+  — so `make test` still never needs a live database, and no env var is required. On colima
+  (no Docker Desktop) it needs two env vars exported or it silently skips instead of running:
+  `DOCKER_HOST=$(docker context inspect colima -f '{{.Endpoints.docker.Host}}')` and
+  `TESTCONTAINERS_RYUK_DISABLED=true` (colima can't bind-mount its socket into
+  testcontainers' cleanup sidecar).
 
 ## How to work here
 

@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(grep -rln \"_test.go$\" /Users/mons/dev/heimdall/internal)"
-    ]
-  }
-}

@@ -14,8 +14,7 @@ import (
 // TestNewIntegration applies the real migrations/ directory to a disposable
 // Postgres container started via testcontainers-go. It skips cleanly
 // whenever Docker isn't reachable, so `make test` never needs Docker or a
-// live database. See CLAUDE.md for why this test is exempt from the
-// env-var-gated integration test convention.
+// live database.
 func TestNewIntegration(t *testing.T) {
 	testcontainers.SkipIfProviderIsNotHealthy(t)
 

@@ -6,6 +6,7 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/http"
 	"time"
 
 	"github.com/ismetkoralay/heimdall/internal/auth"
@@ -17,6 +18,7 @@ var (
 
 type Repository interface {
 	CreateAPIKey(ctx context.Context, apiKey auth.APIKey) (auth.APIKey, error)
+	GetAPIKeyByHashedKey(ctx context.Context, hashedKey string) (auth.APIKey, error)
 }
 
 type Service struct {
@@ -61,6 +63,22 @@ func (s *Service) GenerateAndSaveAPIKey(
 	}
 
 	return key, nil
+}
+
+func (s *Service) ValidateAPIKey(ctx context.Context, key string) (auth.APIKey, error) {
+	res, err := s.repository.GetAPIKeyByHashedKey(ctx, hashKey(key))
+	if err != nil {
+		return auth.APIKey{}, err
+	}
+
+	if res.Revoked {
+		return auth.APIKey{}, &auth.AuthError{
+			StatusCode: http.StatusUnauthorized,
+			Err:        errors.New("invalid token"),
+		}
+	}
+
+	return res, nil
 }
 
 func hashKey(key string) string {

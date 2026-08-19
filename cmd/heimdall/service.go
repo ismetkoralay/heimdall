@@ -14,11 +14,14 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ismetkoralay/heimdall/internal/api"
+	"github.com/ismetkoralay/heimdall/internal/auth/repository"
+	"github.com/ismetkoralay/heimdall/internal/auth/service"
 	"github.com/ismetkoralay/heimdall/internal/config"
 	"github.com/ismetkoralay/heimdall/internal/health"
 	"github.com/ismetkoralay/heimdall/internal/provider"
 	"github.com/ismetkoralay/heimdall/internal/provider/ollama"
 	"github.com/ismetkoralay/heimdall/internal/sql"
+	"github.com/ismetkoralay/heimdall/internal/utils"
 )
 
 var ErrProviderBaseURLNotSet = errors.New("error provider base url is not set")
@@ -55,9 +58,12 @@ func main() {
 		}
 	}()
 
+	authRepo := repository.New(db, logger)
+	authService := service.New(authRepo, time.Now, utils.GenerateKey)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", health.Handler)
-	mux.Handle("POST /v1/chat/completions", api.ChatHandler(router, time.Now, uuid.New))
+	mux.Handle("POST /v1/chat/completions", api.AuthMiddleware(api.ChatHandler(router, time.Now, uuid.New), logger, authService))
 
 	server := &http.Server{
 		Addr:              ":" + cfg.Port,

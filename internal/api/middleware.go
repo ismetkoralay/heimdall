@@ -8,15 +8,7 @@ import (
 	"strings"
 
 	"github.com/ismetkoralay/heimdall/internal/auth"
-)
-
-type contextKey string
-
-const (
-	apiKeyIDContextKey              contextKey = "APIKeyID"
-	apiKeyRPMLimitContextKey        contextKey = "APIKeyRPMLimit"
-	apiKeyDailyTokenLimitContextKey contextKey = "APIKeyDailyTokenLimit"
-	apiKeyCreatedAtContextKey       contextKey = "APIKeyCreatedAt"
+	"github.com/ismetkoralay/heimdall/internal/reqctx"
 )
 
 type AuthService interface {
@@ -53,10 +45,10 @@ func AuthMiddleware(
 			http.Error(w, "something went wrong", http.StatusInternalServerError)
 			return
 		}
-		ctx := context.WithValue(r.Context(), apiKeyIDContextKey, res.ID)
-		ctx = context.WithValue(ctx, apiKeyRPMLimitContextKey, res.RPMLimit)
-		ctx = context.WithValue(ctx, apiKeyDailyTokenLimitContextKey, res.DailyTokenQuota)
-		ctx = context.WithValue(ctx, apiKeyCreatedAtContextKey, res.CreatedAt)
+
+		ctx := reqctx.SetAPIKeyID(r.Context(), res.ID)
+		ctx = reqctx.SetAPIKeyRPMLimit(ctx, res.RPMLimit)
+		ctx = reqctx.SetAPIKeyDailyTokenQuota(ctx, res.DailyTokenQuota)
 
 		next.ServeHTTP(w, r.WithContext(ctx))
 		logger.Info("auth middleware done")

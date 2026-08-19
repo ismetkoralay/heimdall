@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/ismetkoralay/heimdall/internal/auth"
+	"github.com/ismetkoralay/heimdall/internal/reqctx"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -36,7 +37,6 @@ func TestAuthMiddleware(t *testing.T) {
 		expectedAPIKeyID        string
 		expectedRPMLimit        int
 		expectedDailyTokenQuota int
-		expectedCreatedAt       time.Time
 	}{
 		{
 			name:       "missing authorization header",
@@ -132,7 +132,6 @@ func TestAuthMiddleware(t *testing.T) {
 			expectedAPIKeyID:        "key-1",
 			expectedRPMLimit:        60,
 			expectedDailyTokenQuota: 1000,
-			expectedCreatedAt:       fixedCreatedAt,
 		},
 	}
 
@@ -143,10 +142,15 @@ func TestAuthMiddleware(t *testing.T) {
 			next := http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				nextCalled = true
 
-				assert.Equal(t, tt.expectedAPIKeyID, r.Context().Value(apiKeyIDContextKey))
-				assert.Equal(t, tt.expectedRPMLimit, r.Context().Value(apiKeyRPMLimitContextKey))
-				assert.Equal(t, tt.expectedDailyTokenQuota, r.Context().Value(apiKeyDailyTokenLimitContextKey))
-				assert.Equal(t, tt.expectedCreatedAt, r.Context().Value(apiKeyCreatedAtContextKey))
+				apiKeyID, err := reqctx.GetAPIKeyID(r.Context())
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedAPIKeyID, apiKeyID)
+				rpmLimit, err := reqctx.GetAPIKeyRPMLimit(r.Context())
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedRPMLimit, rpmLimit)
+				dailyTokenQuota, err := reqctx.GetAPIKeyDailyTokenQuota(r.Context())
+				assert.NoError(t, err)
+				assert.Equal(t, tt.expectedDailyTokenQuota, dailyTokenQuota)
 
 				w.WriteHeader(http.StatusOK)
 				_, _ = w.Write([]byte("ok"))

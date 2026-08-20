@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/ismetkoralay/heimdall/internal/admin"
 	"github.com/ismetkoralay/heimdall/internal/api"
 	"github.com/ismetkoralay/heimdall/internal/auth/repository"
 	"github.com/ismetkoralay/heimdall/internal/auth/service"
@@ -64,6 +65,7 @@ func main() {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", health.Handler)
 	mux.Handle("POST /v1/chat/completions", api.AuthMiddleware(api.ChatHandler(router, time.Now, uuid.New), logger, authService))
+	mux.Handle("POST /v1/admin/keys", admin.AdminMiddleware(cfg.AdminKey, admin.CreateKeyHandler(logger, authService)))
 
 	server := &http.Server{
 		Addr:              ":" + cfg.Port,

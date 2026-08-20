@@ -19,6 +19,7 @@ var (
 	ErrMissingDbPassword          = errors.New("error missing db password")
 	ErrMissingDbName              = errors.New("error missing db name")
 	ErrMissingDbSSLMode           = errors.New("error missing db ssl mode")
+	ErrMissingAdminKey            = errors.New("error missing admin key")
 )
 
 // Config holds the configuration for the project.
@@ -28,6 +29,7 @@ type Config struct {
 	ProviderMap      map[string]string
 	LogLevel         string
 	Database         Database
+	AdminKey         string
 }
 
 type Database struct {
@@ -106,6 +108,11 @@ func Load() (Config, error) {
 		dbMigrationsDir = "migrations"
 	}
 
+	adminKey := os.Getenv("HEIMDALL_ADMIN_KEY")
+	if adminKey == "" {
+		return Config{}, ErrMissingAdminKey
+	}
+
 	return Config{
 		Port:             port,
 		ModelProviderMap: modelConfig,
@@ -121,5 +128,6 @@ func Load() (Config, error) {
 			ApplyMigrations: dbApplyMigrations,
 			MigrationsDir:   dbMigrationsDir,
 		},
+		AdminKey: adminKey,
 	}, nil
 }
